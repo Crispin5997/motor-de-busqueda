@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+httpx
+rapidfuzz
+pyyaml
+python-multipart
+curl_cffi

@@ -1,0 +1,26 @@
+# ============================================================
+# CUPONES CONOCIDOS POR TIENDA
+# El buscador aplica automáticamente el mejor cupón válido
+# al calcular el precio final de cada tienda.
+#
+# kind: percent (porcentaje) | fixed (monto fijo)
+# min_purchase: compra mínima para que aplique (0 = sin mínimo)
+# Se pueden agregar desde la interfaz (pestaña Cupones) o aquí.
+# ============================================================
+
+coupons:
+  - store: demo_dicks
+    code: "SAVE10"
+    kind: percent
+    value: 10
+    min_purchase: 49
+    note: "EJEMPLO — reemplazar con cupones reales"
+    active: true
+
+  - store: demo_jd
+    code: "EXTRA15"
+    kind: percent
+    value: 15
+    min_purchase: 100
+    note: "EJEMPLO — reemplazar con cupones reales"
+    active: true

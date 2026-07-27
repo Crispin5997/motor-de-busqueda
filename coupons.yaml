@@ -1,0 +1,71 @@
+"""Adaptador genérico Shopify.
+
+Muchísimas tiendas de sneakers (boutiques US y casi todas las MX chicas)
+corren en Shopify y exponen endpoints públicos sin anti-bot:
+  /search/suggest.json  -> búsqueda
+  /products/{handle}.js -> detalle con variantes, SKU y stock
+
+Agregar una tienda Shopify en stores.yaml funciona de inmediato.
+"""
+from .base import StoreAdapter
+
+
+class ShopifyAdapter(StoreAdapter):
+    async def search(self, query: str) -> list[dict]:
+        base = self.cfg.base_url.rstrip("/")
+        out: list[dict] = []
+        async with self.client() as c:
+            r = await c.get(
+                f"{base}/search/suggest.json",
+                params={
+                    "q": query,
+                    "resources[type]": "product",
+                    "resources[limit]": "8",
+                    "resources[options][unavailable_products]": "hide",
+                },
+            )
+            r.raise_for_status()
+            products = (r.json().get("resources", {})
+                        .get("results", {}).get("products", []))
+
+            for p in products[:8]:
+                handle = p.get("handle")
+                title = p.get("title", "")
+                url = base + p.get("url", f"/products/{handle}")
+                image = p.get("image") or p.get("featured_image", {}).get("url")
+                price = _to_float(p.get("price"))
+                sku = None
+                list_price = _to_float(p.get("compare_at_price_max"))
+                # Detalle para SKU real y precio exacto de variante
+                if handle:
+                    try:
+                        rd = await c.get(f"{base}/products/{handle}.js")
+                        if rd.status_code == 200:
+                            d = rd.json()
+                            variants = d.get("variants") or []
+                            avail = [v for v in variants if v.get("available")] or variants
+                            if avail:
+                                v = min(avail, key=lambda v: v.get("price", 1e12))
+                                price = (v.get("price") or 0) / 100.0
+                                sku = v.get("sku") or None
+                                cap = v.get("compare_at_price")
+                                if cap:
+                                    list_price = cap / 100.0
+                            if not image and d.get("featured_image"):
+                                image = d["featured_image"]
+                    except Exception:
+                        pass
+                if price:
+                    out.append({
+                        "title": title, "url": url, "price": price,
+                        "list_price": list_price, "sku": sku,
+                        "image": image, "in_stock": True,
+                    })
+        return out
+
+
+def _to_float(v):
+    try:
+        return float(v) if v not in (None, "", 0) else None
+    except (TypeError, ValueError):
+        return None

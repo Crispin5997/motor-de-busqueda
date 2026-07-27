@@ -1,0 +1,25 @@
+"""Registro de adaptadores: construye la lista de tiendas desde stores.yaml."""
+from core.config import load_stores, load_settings
+from .shopify import ShopifyAdapter
+from .demo import DemoAdapter
+from .bigbox import FootLockerAdapter, DicksAdapter, JDSportsAdapter, OnRunningAdapter
+
+TYPES = {
+    "shopify": ShopifyAdapter,
+    "demo": DemoAdapter,
+    "footlocker": FootLockerAdapter,
+    "dicks": DicksAdapter,
+    "jdsports": JDSportsAdapter,
+    "on": OnRunningAdapter,
+}
+
+
+def build_adapters():
+    settings = load_settings()
+    timeout = float(settings.get("timeout_seconds", 12))
+    adapters = []
+    for cfg in load_stores():
+        cls = TYPES.get(cfg.type)
+        if cls:
+            adapters.append(cls(cfg, timeout=timeout))
+    return adapters
